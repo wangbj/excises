@@ -15,10 +15,8 @@ read8KBackward off handle = do
   if off <= 0 then return Nothing else do
     let off' = max 0 (off - size8K)
         size = fromIntegral (off - off')
-    liftIO $ hSeek handle AbsoluteSeek off'
-    buff <- liftIO $ C.hGetSome handle size
+    buff <- liftIO $ hSeek handle AbsoluteSeek off' >> C.hGetSome handle size
     return . Just $ (size, buff, off')
-
 
 data Progress = Done Integer   -- Finished
               | More Int       -- Need mores lines to consume
