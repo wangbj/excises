@@ -6,12 +6,9 @@ numDigits 0 = 0
 numDigits x = 1 + numDigits ( x `div` 10)
 
 readint = fst . fromJust . C.readInt
-
 nexts st k s
   | len < digits = Nothing
-  | len == digits = case st of
-      Just x -> Just x
-      Nothing -> if (readint s == (2+k)) then Just (1+k) else Nothing
+  | len == digits = st `mplus` if readint s == 2+k then Just (1+k) else Nothing
   | x == 1 + k = nexts st x s'
   | x == 2 + k = case st of
       Nothing -> nexts (Just (1+k)) (2+k) s'
