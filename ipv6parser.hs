@@ -1,5 +1,3 @@
-module Main where
-
 import Text.Parsec
 import Data.Char
 import Data.Monoid
