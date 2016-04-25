@@ -41,6 +41,33 @@ func succ (x : Int) -> Int {
     return 1 + x
 }
 
-let x1 : Maybe<Int> = .Nothing
 let x2 : Maybe<Int> = .Just(1)
 let x3 = fmap(succ, x2)
+
+public struct Identity<E> {
+    private let identity : E
+    public func runIdentity() -> E {
+        return identity
+    }
+    public init(_ identity : E){
+        self.identity = identity
+    }
+}
+
+extension Identity : Functor {
+    public typealias A = E
+    public typealias B = Any
+    public typealias FA = Identity<A>
+    public typealias FB = Identity<B>
+    
+    public func fmap<B> (f : A -> B, _ fa : FA) -> Identity<B> {
+        return Identity<B>(f(fa.runIdentity()))
+    }
+}
+
+public func fmap<A, B> (f : A -> B, _ fa : Identity<A>) -> Identity<B> {
+    return fa.fmap(f, fa)
+}
+
+let id1 = Identity(1)
+let id2 = fmap({$0+1}, id1)
