@@ -1,0 +1,8 @@
+flags: {}
+extra-package-dbs: []
+packages:
+- '.'
+extra-deps:
+- stm-conduit-2.8.0
+- text-1.2.2.1
+resolver: lts-5.15
