@@ -51,11 +51,6 @@ dotted = do
   to <- integer
   return [from .. getNext from to]
   
-comma :: MonadState Int m => ParsecT String s m [Int]
-comma = liftM2 go get (sepBy integer (char ','))
-  where go from [] = []
-        go from (x:xs) = (getNext from x) : go (getNext from x) xs
-
 intP :: MonadState Int m => ParsecT String s m [Int]
 intP = do
   next <- liftM2 getNext get integer
