@@ -39,14 +39,18 @@ coloned1 = do
   char ':'
   step <- integer
   let from' = getNext from to
-  return $! from : [from'..getNext from' step]
+      next  = getNext from' step
+  put next
+  return $! from : [from'..next]
 
 dotted :: MonadState Int m => ParsecT String s m [Int]
 dotted = do
   from <- liftM2 getNext get integer
   string ".."
   to <- integer
-  return [from .. getNext from to]
+  let next = getNext from to
+  put next
+  return [from .. next]
   
 intP :: MonadState Int m => ParsecT String s m [Int]
 intP = do
