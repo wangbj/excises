@@ -2,42 +2,42 @@
 import Text.Parsec
 import Control.Monad.State
 
-integer :: Monad m => ParsecT String s m Int
-integer = read <$> many1 digit
+intS :: Monad m => ParsecT String s m String
+intS = many1 digit
 
-getNext k x  | x >  n2 = n1 * base + x
+getNext k s  | x >  n2 = n1 * base + x
              | x <= n2 = (1 + n1) * base + x
-    where    base = 10 ^ countDigits x
+    where    base = 10 ^ (length s)
              (n1, n2) = k `quotRem` base
-             countDigits = length . show
+             x = read s
 
 dashed :: MonadState Int m => ParsecT String s m [Int]
 dashed = do
-  from <- liftM2 getNext get integer
+  from <- liftM2 getNext get intS
   char '-'
-  to <- integer
+  to <- intS
   let next = getNext from to
   put next
   return $! [from .. next]
 
 coloned2 :: MonadState Int m => ParsecT String s m [Int]
 coloned2 = do
-  from <- liftM2 getNext get integer
+  from <- liftM2 getNext get intS
   char ':'
-  to <- integer
+  to <- intS
   char ':'
-  step <- integer
+  step <- read <$> intS
   let next = getNext from to
   put next
   return $! [from, from + step .. next]
 
 coloned1 :: MonadState Int m => ParsecT String s m [Int]
 coloned1 = do
-  from <- liftM2 getNext get integer
+  from <- liftM2 getNext get intS
   char ','
-  to <- integer
+  to <- intS
   char ':'
-  step <- integer
+  step <- intS
   let from' = getNext from to
       next  = getNext from' step
   put next
@@ -45,16 +45,16 @@ coloned1 = do
 
 dotted :: MonadState Int m => ParsecT String s m [Int]
 dotted = do
-  from <- liftM2 getNext get integer
+  from <- liftM2 getNext get intS
   string ".."
-  to <- integer
+  to <- intS
   let next = getNext from to
   put next
   return [from .. next]
   
 intP :: MonadState Int m => ParsecT String s m [Int]
 intP = do
-  next <- liftM2 getNext get integer
+  next <- liftM2 getNext get intS
   put next
   return [next]
 
