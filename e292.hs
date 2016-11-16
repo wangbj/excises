@@ -1,18 +1,15 @@
 {-# LANGUAGE FlexibleContexts #-}
 import Text.Parsec
-import Control.Monad.Identity
 import Control.Monad.State
 
-integer :: MonadState Int m => ParsecT String s m Int
+integer :: Monad m => ParsecT String s m Int
 integer = read <$> many1 digit
-
-countDigits x  | x <  10 = 1
-               | x >= 10 = 1 + countDigits (x `div` 10)
 
 getNext k x  | x >  n2 = n1 * base + x
              | x <= n2 = (1 + n1) * base + x
-    where    base = 10^(countDigits x)
+    where    base = 10 ^ countDigits x
              (n1, n2) = k `quotRem` base
+             countDigits = length . show
 
 dashed :: MonadState Int m => ParsecT String s m [Int]
 dashed = do
