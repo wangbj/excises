@@ -23,7 +23,7 @@ defuseWire c m = Map.lookup c m >>= \v -> return $ Map.update (if v < 2 then con
 defuseFrom :: Color -> Maybe (Map Color Int) -> Bool
 defuseFrom _ Nothing = False
 defuseFrom c (Just m)
-  | Map.null m = if c `elem` [White, Black, Purple] then True else False
+  | Map.null m = c `elem` [White, Black, Purple]
   | otherwise = or . map (\(c', m') -> defuseFrom c' (defuseWire c' m')) $ zip (getNexts c) (repeat m)
 
 -- ^ defuse set of wires, not assuming cuts are ordered
@@ -33,6 +33,14 @@ defuse cs = or $ map (\c -> defuseFrom c (Just m)) t
   where m  = fromList cs
         t = enumFromTo White Purple
 
+defuseE293 :: [Color] -> Bool
+defuseE293 [] = True
+defuseE293 (c:[]) = c `elem` [White, Black, Purple]
+defuseE293 (c:c':cs)
+  | c' `elem` (getNexts c) = defuseE293 (c':cs)
+  | otherwise              = False
+
 --
 ex1 = [White, Red, Green, White]
 ex2 = [White, Orange, Green, White]
+
