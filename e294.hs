@@ -48,19 +48,24 @@ fromList = IntMap.fromListWith (+) . flip zip (repeat 1) . xlate
     xlate :: Text -> [Int]    -- ^ treat '?' as a special char.
     xlate = map (\x -> if x == '?' then maxBound else ord x) . Text.unpack
 
-scrabbleHelper :: IntMap Int -> IntMap Int -> Bool
-scrabbleHelper tiles word
+scrabbleIt :: IntMap Int -> IntMap Int -> Bool
+scrabbleIt tiles word
   | IntMap.null word  = True
   | IntMap.null tiles = False
-scrabbleHelper t@(IntMap.minViewWithKey -> Just ((k, v), m)) w@(IntMap.minViewWithKey -> Just ((k', v'), m'))
-  | k == maxBound = scrabbleHelper (IntMap.update (\_ -> if v <= v' then Nothing else Just (v - v')) k t)
-                    (IntMap.update (\_ -> if v < v' then Just (v' - v) else Nothing) k' w)
-  | k /= k'       = scrabbleHelper m w                    
-  | v >= v'       = scrabbleHelper m m'
-  | v  < v'       = scrabbleHelper m (IntMap.insert k' (v' - v) m')
+scrabbleIt (IntMap.minViewWithKey -> Just ((k, v), m)) (IntMap.minViewWithKey -> Just ((k', v'), m')) = scrabbleHelper k v m k' v' m'
 
+scrabbleHelper k v m k' v' m'
+  | k == maxBound = scrabbleIt (if v <= v' then m else IntMap.insert k (v - v') m)
+                    (if v < v' then IntMap.insert k (v' - v) m' else m')
+  | k < k'        = scrabbleIt m (IntMap.insert k' v' m') 
+  | k > k'        = case IntMap.lookup maxBound m >> IntMap.maxViewWithKey (IntMap.insert k v m) of
+      Nothing           -> False
+      Just ((k1,v1),m1) -> scrabbleHelper k1 v1 m1 k' v' m'
+  | v >= v'       = scrabbleIt m m'
+  | v  < v'       = scrabbleIt m (IntMap.insert k' (v' - v) m')
+  
 scrabble :: Text -> Text -> Bool
-scrabble = on scrabbleHelper fromList
+scrabble = on scrabbleIt fromList
 
 matchLongest :: Text -> Text -> Text -> Text
 matchLongest tile res word 
@@ -116,16 +121,16 @@ bonus3_testcases = [ ("dcthoyueorza", "zydeco")
                    , ("udosjanyuiuebr??", "jaybirds")
                    , ("vaakojeaietg????????", "straightjacketed") ]
 
-runTestCases ( (l, r), o ) = it (show (l, r)) (scrabble l r `shouldBe` o)
+runTestCase ( (l, r), o ) = it (show (l, r)) (scrabble l r `shouldBe` o)
 
-{-
-runTestCases' (l, r) = it (show (l, r)) $ do
-  dict_ <- runIO getDict
+runTestCaseWith f (l, r) = it (show (l, r)) $ do
+  dict_ <- getDict
   case dict_ of
     Left err -> fail (show err)
-    Right dict -> do
-      x <- runIO $ runReaderT (longest l) dict
-      return $! x `shouldBe` r
--}
+    Right dict -> runReaderT (f l) dict `shouldReturn` r
 
-main = hspec $ mapM_ runTestCases (example_testcases ++ bonus1_testcases)
+bonus_2_3 = hspec $ do
+  mapM_ (runTestCaseWith longest) bonus2_testcases
+  mapM_ (runTestCaseWith highest) bonus3_testcases
+
+main = (hspec $ mapM_ runTestCase (example_testcases ++ bonus1_testcases)) >> bonus_2_3
