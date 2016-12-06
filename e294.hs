@@ -6,7 +6,6 @@
 
 import qualified Data.ByteString as S
 import           Data.ByteString (ByteString)
-import           Data.Aeson
 import           Data.Proxy
 import           Network.HTTP.Client.TLS
 import           Network.HTTP.Client (newManager)
@@ -84,7 +83,7 @@ points = concat $ [
 getPoints :: Text -> Text -> Int
 getPoints t = cnt . on (IntMap.intersectionWith min) fromList t
   where
-    cnt s = IntMap.foldlWithKey acc 0 s
+    cnt = IntMap.foldlWithKey acc 0
     acc pts k v = pts + v * fromMaybe 0 (lookup (chr k) points)
 
 matchHighest :: Text -> (Int, Text) -> Text -> (Int, Text)
