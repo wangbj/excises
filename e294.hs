@@ -1,16 +1,13 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE DataKinds #-}
-{-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE TypeOperators #-}
-{-# LANGUAGE MultiWayIf #-}
 {-# LANGUAGE ViewPatterns #-}
 
 import qualified Data.ByteString as S
 import           Data.ByteString (ByteString)
 import           Data.Aeson
 import           Data.Proxy
-import           GHC.Generics
 import           Network.HTTP.Client.TLS
 import           Network.HTTP.Client (newManager)
 import           Servant.API
@@ -19,13 +16,10 @@ import qualified Data.Text as Text
 import qualified Data.Text.Encoding as Text
 import           Data.Text (Text)
 import           Data.Char
-import qualified Data.IntMap as IntMap
-import           Data.IntMap (IntMap)
-import qualified Data.Map as Map
-import           Data.Map (Map)
+import qualified Data.IntMap.Strict as IntMap
+import           Data.IntMap.Strict (IntMap)
 import           Data.Maybe
 import           Data.Function
-import           Data.Ord
 import           Control.Monad.Reader
 import           Control.Monad
 import           Test.Hspec
@@ -36,12 +30,15 @@ type API = Get '[OctetStream] ByteString
 api :: Proxy API
 api = Proxy
 
-getDict :: IO (Either ServantError [Text])
+type Dict = [Text]
+
+getDict :: IO (Either ServantError Dict)
 getDict =  do
   manager <- newManager tlsManagerSettings
   res <- runClientM (client api) (ClientEnv manager (BaseUrl Https "storage.googleapis.com" 443 "/google-code-archive-downloads/v2/code.google.com/dotnetperls-controls/enable1.txt"))
   return $ Text.splitOn "\r\n" . Text.decodeUtf8 <$> res
 
+-- ^ convert text to intmap for fast processing
 fromList :: Text -> IntMap Int
 fromList = IntMap.fromListWith (+) . flip zip (repeat 1) . xlate
   where
@@ -53,7 +50,6 @@ scrabbleIt tiles word
   | IntMap.null word  = True
   | IntMap.null tiles = False
 scrabbleIt (IntMap.minViewWithKey -> Just ((k, v), m)) (IntMap.minViewWithKey -> Just ((k', v'), m')) = scrabbleHelper k v m k' v' m'
-
 scrabbleHelper k v m k' v' m'
   | k == maxBound = scrabbleIt (if v <= v' then m else IntMap.insert k (v - v') m)
                     (if v < v' then IntMap.insert k (v' - v) m' else m')
@@ -68,12 +64,12 @@ scrabble :: Text -> Text -> Bool
 scrabble = on scrabbleIt fromList
 
 matchLongest :: Text -> Text -> Text -> Text
-matchLongest tile res word 
+matchLongest tile res word
   | scrabble tile word == False = res
   | Text.length word  > Text.length res = word
   | Text.length word <= Text.length res = res
 
-longest :: Text -> ReaderT [Text] IO Text
+longest :: Text -> ReaderT Dict IO Text
 longest tile = asks (foldl (matchLongest tile) Text.empty)
 
 points = concat $ [
@@ -86,9 +82,10 @@ points = concat $ [
   , zip "qz" (repeat 10) ]
 
 getPoints :: Text -> Text -> Int
-getPoints tile = Text.foldl acc 0
+getPoints t = cnt . on (IntMap.intersectionWith min) fromList t
   where
-    acc pts c = pts + fromMaybe 0 (Text.find (== c) tile >>= flip lookup points)
+    cnt s = IntMap.foldlWithKey acc 0 s
+    acc pts k v = pts + v * fromMaybe 0 (lookup (chr k) points)
 
 matchHighest :: Text -> (Int, Text) -> Text -> (Int, Text)
 matchHighest tile res@(p, t) word
@@ -97,7 +94,7 @@ matchHighest tile res@(p, t) word
   | pts                <= p     = res
   where pts = getPoints tile word
 
-highest :: Text -> ReaderT [Text] IO Text
+highest :: Text -> ReaderT Dict IO Text
 highest tile = asks (snd . foldl (matchHighest tile) (0, ""))
 
 example_testcases = [ ( ("ladilmy", "daily"), True)
@@ -129,8 +126,7 @@ runTestCaseWith f (l, r) = it (show (l, r)) $ do
     Left err -> fail (show err)
     Right dict -> runReaderT (f l) dict `shouldReturn` r
 
-bonus_2_3 = hspec $ do
-  mapM_ (runTestCaseWith longest) bonus2_testcases
+bonus_2_3 = mapM_ (runTestCaseWith longest) bonus2_testcases >>
   mapM_ (runTestCaseWith highest) bonus3_testcases
 
-main = (hspec $ mapM_ runTestCase (example_testcases ++ bonus1_testcases)) >> bonus_2_3
+main = (hspec $ mapM_ runTestCase (example_testcases ++ bonus1_testcases)) >> (hspec bonus_2_3)
