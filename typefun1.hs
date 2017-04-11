@@ -124,15 +124,6 @@ type family a && b where
   False && True = False
   False && False = False
   
-class If_ pred a b t | pred a b -> t
-instance If_ True a b a
-instance If_ False a b b
-
-class EvalIf p a b t | p a b -> t where
-  evalIf :: p -> a -> b -> t
-  
-instance If_ p a b t => EvalIf p a b t where evalIf = undefined
-
 type family If c t e where
   If True t e = t
   If False t e = e
@@ -198,7 +189,6 @@ type family ISqrt a where
 data Nil
 data Cons x xs
 -}
-
 
 --
 main = return()
