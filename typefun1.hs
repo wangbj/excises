@@ -13,6 +13,8 @@
 
 module Main where
 
+import qualified GHC.TypeLits as TL
+
 data Z
 data S n
 
@@ -176,8 +178,16 @@ instance PeanoDivMod a b c => PeanoDivMod2 a b c where divMod2 = undefined
 -- :type divMod2 @(S (S (S (S (S Z))))) @(S (S Z))
 -- divMod2 @(S (S (S (S (S Z))))) @(S (S Z))
 --   :: S (S (S (S (S Z)))) -> S (S Z) -> (S (S Z), S Z)
-  
-{- TBD
+
+type family FromInteger a where
+  FromInteger 0 = Z
+  FromInteger (n) = S (FromInteger (n TL.- 1))
+
+type family ToInteger a where
+  ToInteger Z = 0
+  ToInteger (S n) = 1 TL.+ (ToInteger n)
+
+{-
 type family ISqrtIter a b where
   ISqrtIter Z b = Z
   ISqrtIter a b = If (  ( (b * b) <= a) && ( ((S b) * (S b)) > a)  ) b (ISqrtIter a (S b))
@@ -188,6 +198,7 @@ type family ISqrt a where
 data Nil
 data Cons x xs
 -}
+
 
 --
 main = return()
